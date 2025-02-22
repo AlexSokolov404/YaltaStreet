@@ -201,7 +201,7 @@
           opacity: currentOpacity,
         }).addTo(map);
         streets.push({ polyline: currentPolyline });
-        actionHistory .push({ action: "add", polyline: currentPolyline });
+        actionHistory.push({ action: "add", polyline: currentPolyline });
         addRemoveHandler(currentPolyline);
       }
 
@@ -214,6 +214,24 @@
       }
 
       function addRemoveHandler(polyline) {
+        let touchTimer;
+
+        polyline.on("touchstart", function () {
+          touchTimer = setTimeout(() => {
+            if (isEditing) {
+              map.removeLayer(polyline);
+              streets = streets.filter(
+                (street) => street.polyline !== polyline
+              );
+              actionHistory.push({ action: "remove", polyline: polyline });
+            }
+          }, 500); // Удержание 0.5 сек = удаление
+        });
+
+        polyline.on("touchend", function () {
+          clearTimeout(touchTimer);
+        });
+
         polyline.on("dblclick", function () {
           if (isEditing) {
             map.removeLayer(polyline);
