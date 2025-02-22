@@ -11,10 +11,16 @@
         -webkit-user-select: none;
         -webkit-touch-callout: none;
       }
-      #map {
-        height: 600px;
+      body,
+      html {
+        margin: 0;
+        padding: 0;
         width: 100%;
-        margin-top: 10px;
+        font-family: Arial, sans-serif;
+      }
+      #map {
+        height: 70vh;
+        width: 100%;
       }
       .controls {
         margin: 10px;
@@ -22,13 +28,118 @@
       .hidden {
         display: none;
       }
+
+      /* Бургер-меню */
+      .burger-menu {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 40px;
+        height: 40px;
+        background: black;
+        border-radius: 5px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 1000;
+        transition: transform 0.3s ease-in-out;
+      }
+
+      .burger-menu.open {
+        transform: rotate(180deg);
+      }
+
+      .burger-menu div {
+        width: 25px;
+        height: 3px;
+        background: white;
+        position: relative;
+        transition: all 0.3s ease-in-out;
+      }
+
+      .burger-menu.open div {
+        background: transparent;
+      }
+
+      .burger-menu div::before,
+      .burger-menu div::after {
+        content: "";
+        position: absolute;
+        width: 25px;
+        height: 3px;
+        background: white;
+        transition: all 0.3s ease-in-out;
+      }
+
+      .burger-menu div::before {
+        top: -8px;
+      }
+
+      .burger-menu div::after {
+        top: 8px;
+      }
+
+      .burger-menu.open div::before {
+        top: 0;
+        transform: rotate(45deg);
+      }
+
+      .burger-menu.open div::after {
+        top: 0;
+        transform: rotate(-45deg);
+      }
+
+      /* Список улиц */
+      .street-list {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.9);
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transform: translateY(-100%);
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out;
+        overflow-y: auto;
+        z-index: 999;
+      }
+
+      .street-list.open {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .street-list ol {
+        width: 100%;
+        max-width: 300px;
+        padding: 0;
+        list-style: none;
+        text-align: center;
+      }
+
+      .street-list li {
+        list-style: decimal inside;
+        cursor: pointer;
+        padding: 10px;
+        border-bottom: 1px solid white;
+        font-size: 18px;
+      }
+
+      .street-list li:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
     </style>
   </head>
   <body>
     <div class="controls" id="defaultControls">
       <input type="text" id="searchInput" placeholder="Введите улицу..." />
       <button onclick="searchStreet()">Найти</button>
-      <button onclick="clearMap()">Очистить карту</button>
       <button onclick="enableEditMode()">Редактировать карту</button>
     </div>
 
@@ -53,11 +164,21 @@
       </button>
     </div>
 
+    <!-- Бургер-меню -->
+    <div class="burger-menu" onclick="toggleStreetList()">
+      <div></div>
+    </div>
+
+    <!-- Список найденных улиц -->
+    <div class="street-list" id="streetList">
+      <ol id="streetItems"></ol>
+    </div>
+
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-      var map = L.map("map", { doubleClickZoom: false }).setView(
+      let map = L.map("map", { doubleClickZoom: false }).setView(
         [44.4951, 34.1661],
         13
       );
@@ -65,24 +186,33 @@
         attribution: "© OpenStreetMap",
       }).addTo(map);
 
-      var streets = [];
-      var actionHistory = [];
-      var isEditing = false;
-      var currentPolyline = null;
-      var lastClickTime = 0;
-      var canDraw = true;
-      var currentOpacity = 1;
+      let streets = [];
+      let actionHistory = [];
+      let isEditing = false;
+      let currentPolyline = null;
+      let lastClickTime = 0;
+      let canDraw = true;
+      let currentOpacity = 1;
 
       map.whenReady(() => {
         document.querySelector(".leaflet-control-attribution").style.display =
           "none";
       });
 
+      let streetListContainer = document.getElementById("streetList");
+      let streetItems = document.getElementById("streetItems");
+      let burgerMenu = document.querySelector(".burger-menu");
+
+      function toggleStreetList() {
+        var isOpen = streetListContainer.classList.toggle("open");
+        burgerMenu.classList.toggle("open", isOpen);
+      }
+
       function searchStreet() {
-        var searchQuery = document.getElementById("searchInput").value;
+        let searchQuery = document.getElementById("searchInput").value;
         if (!searchQuery) return;
 
-        var nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+        let nominatimUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
           searchQuery + ", Ялта"
         )}`;
 
@@ -90,9 +220,9 @@
           .then((response) => response.json())
           .then((data) => {
             if (data.length > 0) {
-              var streetLat = data[0].lat;
-              var streetLon = data[0].lon;
-              var streetName = data[0].display_name.split(",")[0];
+              let streetLat = data[0].lat;
+              let streetLon = data[0].lon;
+              let streetName = data[0].display_name.split(",")[0];
 
               getStreetGeometry(streetName, streetLat, streetLon);
             } else {
@@ -103,13 +233,13 @@
       }
 
       function getStreetGeometry(streetName, lat, lon) {
-        var overpassQuery = `
+        let overpassQuery = `
                 [out:json];
                 way[highway][name="${streetName}"](around:500, ${lat}, ${lon});
                 out geom;
             `;
 
-        var url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
+        let url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(
           overpassQuery
         )}`;
 
@@ -117,10 +247,10 @@
           .then((response) => response.json())
           .then((data) => {
             if (data.elements.length > 0) {
-              var streetCoords = [];
+              let streetCoords = [];
               data.elements.forEach((element) => {
                 if (element.type === "way" && element.geometry) {
-                  var coords = element.geometry.map((point) => [
+                  let coords = element.geometry.map((point) => [
                     point.lat,
                     point.lon,
                   ]);
@@ -128,24 +258,16 @@
                 }
               });
 
-              var polyline = L.polyline(streetCoords, {
+              let polyline = L.polyline(streetCoords, {
                 color: "green",
                 weight: 10,
               }).addTo(map);
 
-              var bounds = L.latLngBounds(streetCoords.flat());
-              var center = bounds.getCenter();
+              let bounds = L.latLngBounds(streetCoords.flat());
+              let center = bounds.getCenter();
 
-              var streetLabel = L.marker(center, {
-                icon: L.divIcon({
-                  className: "street-label",
-                  html: `<div style="color: black; font-weight: bold; background: white; padding: 2px 5px; border-radius: 5px; font-size: 12px;">${streetName}</div>`,
-                  iconSize: [100, 20],
-                  iconAnchor: [50, 10],
-                }),
-              }).addTo(map);
-
-              streets.push({ polyline, streetLabel });
+              streets.push({ name: streetName, polyline, bounds });
+              updateStreetList();
               map.fitBounds(bounds);
             } else {
               alert("Полные данные об улице не найдены!");
@@ -154,14 +276,17 @@
           .catch((error) => console.error("Ошибка Overpass API:", error));
       }
 
-      function clearMap() {
-        streets.forEach((street) => {
-          map.removeLayer(street.polyline);
-          if (street.streetLabel) {
-            map.removeLayer(street.streetLabel);
-          }
+      function updateStreetList() {
+        streetItems.innerHTML = "";
+        streets.forEach((street, index) => {
+          var li = document.createElement("li");
+          li.textContent = street.name;
+          li.onclick = function () {
+            toggleStreetList();
+            map.fitBounds(street.bounds);
+          };
+          streetItems.appendChild(li);
         });
-        streets = [];
       }
 
       function enableEditMode() {
@@ -187,8 +312,8 @@
       function addPointToLine(e) {
         if (!isEditing || !canDraw) return;
 
-        var color = document.getElementById("colorPicker").value;
-        var now = Date.now();
+        let color = document.getElementById("colorPicker").value;
+        let now = Date.now();
 
         if (!currentPolyline || now - lastClickTime > 1000) {
           startNewLine(e.latlng, color);
@@ -212,7 +337,7 @@
 
       function continueLine(latlng) {
         if (currentPolyline) {
-          var latlngs = currentPolyline.getLatLngs();
+          let latlngs = currentPolyline.getLatLngs();
           latlngs.push(latlng);
           currentPolyline.setLatLngs(latlngs);
         }
@@ -252,7 +377,7 @@
       function undoLastAction() {
         if (actionHistory.length === 0) return;
 
-        var lastAction = actionHistory.pop();
+        let lastAction = actionHistory.pop();
 
         if (lastAction.action === "add") {
           map.removeLayer(lastAction.polyline);
