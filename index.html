@@ -120,15 +120,34 @@
         max-width: 300px;
         padding: 0;
         list-style: none;
-        text-align: center;
+        text-align: left;
       }
 
       .street-list li {
-        list-style: decimal inside;
-        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         padding: 10px;
         border-bottom: 1px solid white;
         font-size: 18px;
+      }
+
+      .street-list li .street-name {
+        flex-grow: 1;
+        cursor: pointer;
+      }
+
+      .street-list li .color-picker {
+        margin: 0 10px;
+        cursor: pointer;
+      }
+
+      .street-list li .delete-btn {
+        cursor: pointer;
+        font-size: 20px;
+        color: grey;
+        background: none;
+        border: none;
       }
 
       .street-list li:hover {
@@ -266,7 +285,12 @@
               let bounds = L.latLngBounds(streetCoords.flat());
               let center = bounds.getCenter();
 
-              streets.push({ name: streetName, polyline, bounds });
+              streets.push({
+                name: streetName,
+                polyline,
+                bounds,
+                color: "#012800",
+              });
               updateStreetList();
               map.fitBounds(bounds);
             } else {
@@ -280,7 +304,11 @@
         streetItems.innerHTML = "";
         streets.forEach((street, index) => {
           var li = document.createElement("li");
-          li.textContent = street.name;
+          li.innerHTML = `
+                    <span class="street-name" onclick="focusStreet(${index})">${street.name}</span>
+                    <input type="color" class="color-picker" value="${street.color}" onchange="changeStreetColor(${index}, this.value)">
+                    <button class="delete-btn" onclick="deleteStreet(${index})">✖</button>
+                `;
           li.onclick = function () {
             toggleStreetList();
             map.fitBounds(street.bounds);
@@ -396,6 +424,22 @@
         streets.forEach((street) => {
           street.polyline.setStyle({ opacity: currentOpacity });
         });
+      }
+
+      function focusStreet(index) {
+        toggleStreetList();
+        map.fitBounds(streets[index].bounds);
+      }
+
+      function changeStreetColor(index, color) {
+        streets[index].polyline.setStyle({ color });
+        streets[index].color = color;
+      }
+
+      function deleteStreet(index) {
+        map.removeLayer(streets[index].polyline);
+        streets.splice(index, 1);
+        updateStreetList();
       }
     </script>
   </body>
