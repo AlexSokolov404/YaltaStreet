@@ -6,6 +6,11 @@
     <title>Редактируемая карта</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
+      * {
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
       #map {
         height: 600px;
         width: 100%;
@@ -214,10 +219,15 @@
       }
 
       function addRemoveHandler(polyline) {
-        let touchTimer;
+        let lastTap = 0;
 
-        polyline.on("touchstart", function () {
-          touchTimer = setTimeout(() => {
+        polyline.on("click", function (e) {
+          let currentTime = new Date().getTime();
+          let tapLength = currentTime - lastTap;
+
+          if (tapLength < 300 && tapLength > 0) {
+            // Если двойной тап (интервал < 300 мс)
+            L.DomEvent.preventDefault(e); // Отключаем стандартное поведение
             if (isEditing) {
               map.removeLayer(polyline);
               streets = streets.filter(
@@ -225,14 +235,12 @@
               );
               actionHistory.push({ action: "remove", polyline: polyline });
             }
-          }, 500); // Удержание 0.5 сек = удаление
+          }
+          lastTap = currentTime;
         });
 
-        polyline.on("touchend", function () {
-          clearTimeout(touchTimer);
-        });
-
-        polyline.on("dblclick", function () {
+        polyline.on("dblclick", function (e) {
+          L.DomEvent.preventDefault(e); // Отключаем стандартное поведение
           if (isEditing) {
             map.removeLayer(polyline);
             streets = streets.filter((street) => street.polyline !== polyline);
