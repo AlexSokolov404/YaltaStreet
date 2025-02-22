@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
       #map {
-        height: 500px;
+        height: 600px;
         width: 100%;
         margin-top: 10px;
       }
@@ -28,8 +28,21 @@
     </div>
 
     <div class="controls hidden" id="editControls">
-      <label for="colorPicker">Выберите цвет линии:</label>
+      <label for="colorPicker">Цвет линии:</label>
       <input type="color" id="colorPicker" value="#ff0000" />
+
+      <label for="opacitySlider">Прозрачность:</label>
+      <input
+        type="range"
+        id="opacitySlider"
+        min="0"
+        max="1"
+        step="0.1"
+        value="1"
+        oninput="updateOpacity(this.value)"
+      />
+
+      <button onclick="undoLastAction()">Назад</button>
       <button onclick="disableEditMode()">
         Выйти из режима редактирования
       </button>
@@ -48,11 +61,12 @@
       }).addTo(map);
 
       var streets = [];
+      var actionHistory = [];
       var isEditing = false;
-      var isDeleting = false;
       var currentPolyline = null;
       var lastClickTime = 0;
       var canDraw = true;
+      var currentOpacity = 1;
 
       map.whenReady(() => {
         document.querySelector(".leaflet-control-attribution").style.display =
@@ -127,7 +141,6 @@
               }).addTo(map);
 
               streets.push({ polyline, streetLabel });
-
               map.fitBounds(bounds);
             } else {
               alert("Полные данные об улице не найдены!");
@@ -161,12 +174,13 @@
         map.off("click", addPointToLine);
         if (currentPolyline) {
           streets.push({ polyline: currentPolyline });
+          actionHistory.push({ action: "add", polyline: currentPolyline });
           currentPolyline = null;
         }
       }
 
       function addPointToLine(e) {
-        if (!isEditing || !canDraw) return; // Не рисуем, если запрещено
+        if (!isEditing || !canDraw) return;
 
         var color = document.getElementById("colorPicker").value;
         var now = Date.now();
@@ -184,8 +198,10 @@
         currentPolyline = L.polyline([latlng], {
           color: color,
           weight: 10,
+          opacity: currentOpacity,
         }).addTo(map);
         streets.push({ polyline: currentPolyline });
+        actionHistory .push({ action: "add", polyline: currentPolyline });
         addRemoveHandler(currentPolyline);
       }
 
@@ -200,11 +216,34 @@
       function addRemoveHandler(polyline) {
         polyline.on("dblclick", function () {
           if (isEditing) {
-            canDraw = false; // Временно запрещаем рисование, чтобы избежать багов
             map.removeLayer(polyline);
             streets = streets.filter((street) => street.polyline !== polyline);
-            setTimeout(() => (canDraw = true), 100); // Через 100 мс снова можно рисовать
+            actionHistory.push({ action: "remove", polyline: polyline });
           }
+        });
+      }
+
+      function undoLastAction() {
+        if (actionHistory.length === 0) return;
+
+        var lastAction = actionHistory.pop();
+
+        if (lastAction.action === "add") {
+          map.removeLayer(lastAction.polyline);
+          streets = streets.filter(
+            (street) => street.polyline !== lastAction.polyline
+          );
+        } else if (lastAction.action === "remove") {
+          lastAction.polyline.addTo(map);
+          lastAction.polyline.setStyle({ opacity: currentOpacity });
+          streets.push({ polyline: lastAction.polyline });
+        }
+      }
+
+      function updateOpacity(value) {
+        currentOpacity = parseFloat(value);
+        streets.forEach((street) => {
+          street.polyline.setStyle({ opacity: currentOpacity });
         });
       }
     </script>
