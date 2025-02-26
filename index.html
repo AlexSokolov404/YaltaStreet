@@ -15,25 +15,31 @@
       html {
         margin: 0;
         padding: 0;
-        width: 100%;
+        box-sizing: border-box;
         font-family: Arial, sans-serif;
       }
-      #map {
-        height: 70vh;
-        width: 100%;
+      .wrapper {
+        padding: 5px;
       }
-      .controls {
-        margin: 10px;
+      #map {
+        position: relative;
+        height: 70vh;
       }
       .hidden {
         display: none;
       }
+      .admin_panel {
+        display: flex;
+      }
 
+      .controls {
+        width: 100%;
+      }
       /* Бургер-меню */
       .burger-menu {
         position: absolute;
-        top: 15px;
-        right: 15px;
+        top: 10px;
+        right: 10px;
         width: 40px;
         height: 40px;
         background: black;
@@ -153,39 +159,91 @@
       .street-list li:hover {
         background: rgba(255, 255, 255, 0.2);
       }
+
+      input[type="text"] {
+        background-color: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        padding: 10px 15px;
+        font-size: 16px;
+        outline: none;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
+
+      input[type="text"]:focus {
+        border-color: #bbb;
+        box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      }
+
+      button {
+        background-color: #000;
+        color: #fff;
+        border: 2px solid #fff;
+        padding: 10px 20px;
+        width: minmax(175px, 250px);
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #fff;
+        color: #000;
+        border-color: #000;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+      }
     </style>
   </head>
   <body>
-    <div class="controls" id="defaultControls">
-      <input type="text" id="searchInput" placeholder="Введите улицу..." />
-      <button onclick="searchStreet()">Найти</button>
-      <button onclick="enableEditMode()">Редактировать карту</button>
-    </div>
+    <div class="wrapper">
+      <div class="admin_panel">
+        <input
+          type="text"
+          class="hidden"
+          id="passwordInput"
+          placeholder="Введите пароль..."
+        />
+        <button class="admin_btn" onclick="openInput()">
+          Получить права администратора
+        </button>
+      </div>
+      <div class="controls" id="defaultControls">
+        <input
+          type="text"
+          class="hidden"
+          id="searchInput"
+          placeholder="Введите улицу..."
+        />
+        <button class="hidden search_btn" onclick="searchStreet()">
+          Найти
+        </button>
+        <button class="hidden edit_btn" onclick="enableEditMode()">
+          Редактировать карту
+        </button>
+      </div>
 
-    <div class="controls hidden" id="editControls">
-      <label for="colorPicker">Цвет линии:</label>
-      <input type="color" id="colorPicker" value="#ff0000" />
+      <div class="controls hidden" id="editControls">
+        <label for="colorPicker">Цвет линии:</label>
+        <input type="color" id="colorPicker" value="#ff0000" />
 
-      <label for="opacitySlider">Прозрачность:</label>
-      <input
-        type="range"
-        id="opacitySlider"
-        min="0"
-        max="1"
-        step="0.1"
-        value="1"
-        oninput="updateOpacity(this.value)"
-      />
+        <label for="opacitySlider">Прозрачность:</label>
+        <input
+          type="range"
+          id="opacitySlider"
+          min="0"
+          max="1"
+          step="0.1"
+          value="1"
+          oninput="updateOpacity(this.value)"
+        />
 
-      <button onclick="undoLastAction()">Назад</button>
-      <button onclick="disableEditMode()">
-        Выйти из режима редактирования
-      </button>
-    </div>
-
-    <!-- Бургер-меню -->
-    <div class="burger-menu" onclick="toggleStreetList()">
-      <div></div>
+        <!-- <button onclick="undoLastAction()">Назад</button> -->
+        <button onclick="disableEditMode()">
+          Выйти из режима редактирования
+        </button>
+      </div>
     </div>
 
     <!-- Список найденных улиц -->
@@ -193,7 +251,12 @@
       <ol id="streetItems"></ol>
     </div>
 
-    <div id="map"></div>
+    <div id="map">
+      <!-- Бургер-меню -->
+      <div class="burger-menu" onclick="toggleStreetList()">
+        <div></div>
+      </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
@@ -205,22 +268,27 @@
         attribution: "© OpenStreetMap",
       }).addTo(map);
 
+      const API_URL = "http://localhost:5000";
       let streets = [];
+      let lines = [];
       let actionHistory = [];
       let isEditing = false;
+      let isDrawingEnabled = false;
       let currentPolyline = null;
       let lastClickTime = 0;
       let canDraw = true;
       let currentOpacity = 1;
+      let timeoutId;
+      let admin = false;
 
       map.whenReady(() => {
         document.querySelector(".leaflet-control-attribution").style.display =
           "none";
       });
 
-      let streetListContainer = document.getElementById("streetList");
-      let streetItems = document.getElementById("streetItems");
-      let burgerMenu = document.querySelector(".burger-menu");
+      const streetListContainer = document.getElementById("streetList");
+      const streetItems = document.getElementById("streetItems");
+      const burgerMenu = document.querySelector(".burger-menu");
 
       function toggleStreetList() {
         var isOpen = streetListContainer.classList.toggle("open");
@@ -285,12 +353,15 @@
               let bounds = L.latLngBounds(streetCoords.flat());
               let center = bounds.getCenter();
 
+              saveLine(streetName, streetCoords, bounds, "#009900");
               streets.push({
                 name: streetName,
                 polyline,
                 bounds,
-                color: "#012800",
+                color: "#009900",
               });
+              console.log(streets);
+
               updateStreetList();
               map.fitBounds(bounds);
             } else {
@@ -300,32 +371,103 @@
           .catch((error) => console.error("Ошибка Overpass API:", error));
       }
 
+      // Сохранить улицу в MongoDB
+      async function saveLine(name, coordinates, bounds, color) {
+        try {
+          const response = await fetch(`${API_URL}/streets`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name, coordinates, bounds, color }),
+          });
+        } catch (error) {
+          console.error("Ошибка сохранения линии:", error);
+        }
+      }
+
+      // Загрузить линии из MongoDB при старте
+      async function loadStreets() {
+        try {
+          const response = await fetch(`${API_URL}/streets`);
+          const lines = await response.json();
+
+          lines.forEach((line) => {
+            const polyline = L.polyline(line.coordinates, {
+              color: line.color,
+              weight: 8,
+            }).addTo(map);
+            streets.push({
+              id: line._id,
+              name: line.name,
+              polyline,
+              bounds: line.bounds,
+              color: line.color,
+            });
+          });
+
+          updateStreetList(); // Обновить список улиц
+        } catch (error) {
+          console.error("Ошибка загрузки линий:", error);
+        }
+      }
+
+      // Функция загрузки сохраненных линий
+      function loadSavedLines() {
+        fetch(`${API_URL}/api/get-lines`)
+          .then((res) => res.json())
+          .then((data) => {
+            data.forEach((line) => {
+              const polyline = L.polyline(line.polyline, {
+                color: line.color,
+                weight: 8,
+              }).addTo(map);
+              polyline._id = line._id;
+              addRemoveHandler(polyline);
+            });
+          })
+          .catch((err) => console.error("Ошибка загрузки:", err));
+      }
+
+      // Загружаем линии при загрузке страницы
+      loadSavedLines();
+
+      // Загружаем линии при старте
+      loadStreets();
+
       function updateStreetList() {
         streetItems.innerHTML = "";
         streets.forEach((street, index) => {
           var li = document.createElement("li");
           li.innerHTML = `
-                    <span class="street-name" onclick="focusStreet(${index})">${street.name}</span>
-                    <input type="color" class="color-picker" value="${street.color}" onchange="changeStreetColor(${index}, this.value)">
-                    <button class="delete-btn" onclick="deleteStreet(${index})">✖</button>
+                    <span class="street-name" onclick="focusStreet(${index})">${
+            street.name
+          }</span>
+                    <input type="color" class="color-picker ${
+                      admin ? "" : "hidden"
+                    }" value="${
+            street.color
+          }" onchange="changeStreetColor(${index}, this.value)">
+                    <button class="delete-btn ${
+                      admin ? "" : "hidden"
+                    }" onclick="deleteStreet(${index})">✖</button>
                 `;
-          li.onclick = function () {
-            toggleStreetList();
-            map.fitBounds(street.bounds);
-          };
           streetItems.appendChild(li);
         });
       }
 
       function enableEditMode() {
         isEditing = true;
+        isDrawingEnabled = false;
         document.getElementById("defaultControls").classList.add("hidden");
         document.getElementById("editControls").classList.remove("hidden");
+        map.once("click", () => {
+          isDrawingEnabled = true;
+        });
         map.on("click", addPointToLine);
       }
 
       function disableEditMode() {
         isEditing = false;
+        isDrawingEnabled = false;
         document.getElementById("defaultControls").classList.remove("hidden");
         document.getElementById("editControls").classList.add("hidden");
 
@@ -338,6 +480,7 @@
       }
 
       function addPointToLine(e) {
+        if (!isDrawingEnabled) return;
         if (!isEditing || !canDraw) return;
 
         let color = document.getElementById("colorPicker").value;
@@ -347,6 +490,11 @@
           startNewLine(e.latlng, color);
         } else {
           continueLine(e.latlng);
+          clearTimeout(timeoutId);
+
+          timeoutId = setTimeout(() => {
+            saveDrawnLine(currentPolyline, color);
+          }, 800);
         }
 
         lastClickTime = now;
@@ -358,7 +506,7 @@
           weight: 10,
           opacity: currentOpacity,
         }).addTo(map);
-        streets.push({ polyline: currentPolyline });
+        lines.push({ polyline: currentPolyline });
         actionHistory.push({ action: "add", polyline: currentPolyline });
         addRemoveHandler(currentPolyline);
       }
@@ -371,75 +519,176 @@
         }
       }
 
-      function addRemoveHandler(polyline) {
-        let lastTap = 0;
+      function saveDrawnLine(line, color) {
+        const latlngs = line
+          .getLatLngs()
+          .flat()
+          .map((latlng) => ({
+            lat: latlng.lat,
+            lng: latlng.lng,
+          }));
 
-        polyline.on("click", function (e) {
-          let currentTime = new Date().getTime();
-          let tapLength = currentTime - lastTap;
-
-          if (tapLength < 300 && tapLength > 0) {
-            // Если двойной тап (интервал < 300 мс)
-            L.DomEvent.preventDefault(e); // Отключаем стандартное поведение
-            if (isEditing) {
-              map.removeLayer(polyline);
-              streets = streets.filter(
-                (street) => street.polyline !== polyline
-              );
-              actionHistory.push({ action: "remove", polyline: polyline });
+        fetch(`${API_URL}/api/save-line`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: "Новая линия",
+            polyline: latlngs,
+            color,
+          }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              line._id = data.id;
+              console.log("Линия сохранена!", data);
+            } else {
+              console.error("Ошибка:", data.error);
             }
-          }
-          lastTap = currentTime;
-        });
+          })
+          .catch((err) => console.error("Ошибка запроса:", err));
+      }
 
+      function addRemoveHandler(polyline) {
         polyline.on("dblclick", function (e) {
-          L.DomEvent.preventDefault(e); // Отключаем стандартное поведение
-          if (isEditing) {
-            map.removeLayer(polyline);
-            streets = streets.filter((street) => street.polyline !== polyline);
-            actionHistory.push({ action: "remove", polyline: polyline });
+          L.DomEvent.preventDefault(e);
+          L.DomEvent.stopPropagation(e);
+
+          if (!isEditing) return;
+
+          isDrawingEnabled = false;
+
+          const id = polyline._id;
+
+          if (!id) {
+            console.error("ID линии не найден!");
+            return;
           }
+
+          // Удаляем линию с карты
+          map.removeLayer(polyline);
+          lines = lines.filter((line) => line._id !== id);
+
+          map.once("click", () => {
+            isDrawingEnabled = true;
+          });
+
+          // Отправляем запрос на сервер для удаления из БД
+          fetch(`${API_URL}/api/delete-line/${id}`, {
+            method: "DELETE",
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success) {
+                console.log("Линия удалена из БД:", id);
+              } else {
+                console.error("Ошибка удаления:", data.error);
+              }
+            })
+            .catch((err) => console.error("Ошибка запроса:", err));
         });
       }
 
-      function undoLastAction() {
-        if (actionHistory.length === 0) return;
+      // function undoLastAction() {
+      //   if (actionHistory.length === 0) return;
 
-        let lastAction = actionHistory.pop();
+      //   let lastAction = actionHistory.pop();
 
-        if (lastAction.action === "add") {
-          map.removeLayer(lastAction.polyline);
-          streets = streets.filter(
-            (street) => street.polyline !== lastAction.polyline
-          );
-        } else if (lastAction.action === "remove") {
-          lastAction.polyline.addTo(map);
-          lastAction.polyline.setStyle({ opacity: currentOpacity });
-          streets.push({ polyline: lastAction.polyline });
-        }
-      }
+      //   if (lastAction.action === "add") {
+      //     map.removeLayer(lastAction.polyline);
+      //     lines = lines.filter((line) => line.polyline !== lastAction.polyline);
+      //   } else if (lastAction.action === "remove") {
+      //     lastAction.polyline.addTo(map);
+      //     lastAction.polyline.setStyle({ opacity: currentOpacity });
+      //     lines.push({ polyline: lastAction.polyline });
+      //   }
+      // }
 
       function updateOpacity(value) {
         currentOpacity = parseFloat(value);
         streets.forEach((street) => {
           street.polyline.setStyle({ opacity: currentOpacity });
         });
+        lines.forEach((line) => {
+          line.polyline.setStyle({ opacity: currentOpacity });
+        });
       }
 
       function focusStreet(index) {
         toggleStreetList();
-        map.fitBounds(streets[index].bounds);
+        const streetBounds = streets[index].bounds;
+        const bounds = L.latLngBounds(
+          [streetBounds._southWest.lat, streetBounds._southWest.lng],
+          [streetBounds._northEast.lat, streetBounds._northEast.lng]
+        );
+        map.fitBounds(bounds);
       }
 
+      // Изменить цвет линии в MongoDB
       function changeStreetColor(index, color) {
-        streets[index].polyline.setStyle({ color });
-        streets[index].color = color;
+        const street = streets[index];
+        street.polyline.setStyle({ color });
+        street.color = color;
+        if (!street.id) return;
+
+        fetch(`${API_URL}/api/update-color`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: street.id, color }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.success) {
+              console.log("Цвет успешно обновлен в БД!");
+            } else {
+              console.error("Ошибка обновления цвета:", data.error);
+            }
+          })
+          .catch((err) => console.error("Ошибка запроса:", err));
       }
 
-      function deleteStreet(index) {
-        map.removeLayer(streets[index].polyline);
-        streets.splice(index, 1);
-        updateStreetList();
+      async function deleteStreet(index) {
+        try {
+          const line = streets[index];
+          if (!line.id) return;
+
+          await fetch(`${API_URL}/streets/${line.id}`, { method: "DELETE" });
+          map.removeLayer(line.polyline);
+          streets.splice(index, 1);
+          updateStreetList();
+        } catch (error) {
+          console.error("Ошибка удаления линии:", error);
+        }
+      }
+
+      function openInput() {
+        const passInput = document.getElementById("passwordInput");
+        const adminBtn = document.querySelector(".admin_btn");
+        const searchInput = document.getElementById("searchInput");
+        const searchBtn = document.querySelector(".search_btn");
+        const editBtn = document.querySelector(".edit_btn");
+        const colorPickers = document.querySelectorAll(".color-picker");
+        const deleteBtn = document.querySelectorAll(".delete-btn");
+        if (passInput.classList == "hidden") {
+          passInput.classList.remove("hidden");
+          adminBtn.innerHTML = "Ввод";
+        } else {
+          if (passInput.value == "Ys25") {
+            admin = true;
+            passInput.classList.add("hidden");
+            adminBtn.classList.add("hidden");
+            searchInput.classList.remove("hidden");
+            searchBtn.classList.remove("hidden");
+            editBtn.classList.remove("hidden");
+
+            colorPickers.forEach((i) => i.classList.remove("hidden"));
+            deleteBtn.forEach((i) => i.classList.remove("hidden"));
+          } else {
+            alert("Вы ввели неверный пароль, уточните его у администратора");
+            passInput.classList.add("hidden");
+            adminBtn.innerHTML = "Получить права администратора";
+          }
+        }
       }
     </script>
   </body>
