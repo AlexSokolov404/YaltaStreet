@@ -360,7 +360,6 @@
                 bounds,
                 color: "#009900",
               });
-              console.log(streets);
 
               updateStreetList();
               map.fitBounds(bounds);
@@ -384,7 +383,7 @@
         }
       }
 
-      // Загрузить линии из MongoDB при старте
+      // Загрузить улицы из MongoDB при старте
       async function loadStreets() {
         try {
           const response = await fetch(`${API_URL}/streets`);
@@ -420,6 +419,12 @@
                 color: line.color,
                 weight: 8,
               }).addTo(map);
+              streets.push({
+                id: line._id,
+                name: line.name,
+                polyline,
+                color: line.color,
+              });
               polyline._id = line._id;
               addRemoveHandler(polyline);
             });
