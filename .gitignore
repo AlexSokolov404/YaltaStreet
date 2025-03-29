@@ -30,3 +30,6 @@ Thumbs.db
 # Исключаем файлы OS
 *.swp
 *.swo
+
+//mongodb+srv://yaltastreet:YaltaStreet2025@yaltastreet.oq6tc.mongodb.net/?retryWrites=true&w=majority&appName=YaltaStreet
+//mongodb+srv://yaltastreet:YaltaStreet2025@cluster0.lwxyf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0

@@ -3,8 +3,25 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="theme-color" content="#4CAF50" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
     <title>Редактируемая карта</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script>
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker
+          .register("/service-worker.js")
+          .then(() => console.log("Service Worker зарегистрирован!"))
+          .catch((err) => console.log("Ошибка Service Worker:", err));
+      }
+    </script>
+
     <style>
       * {
         user-select: none;
@@ -341,6 +358,7 @@
       let currentOpacity = 1;
       let timeoutId;
       let admin = false;
+      let tempPolyline = null;
 
       map.whenReady(() => {
         document.querySelector(".leaflet-control-attribution").style.display =
@@ -568,6 +586,72 @@
 
         lastClickTime = now;
       }
+
+      // map.on("mousemove", (e) => {
+      //   if (isDrawingEnabled && tempPolyline) {
+      //     let latlngs = tempPolyline.getLatLngs();
+      //     latlngs[latlngs.length - 1] = e.latlng; // Последняя точка двигается за курсором
+      //     tempPolyline.setLatLngs(latlngs);
+      //   }
+      // });
+
+      // document.addEventListener("keydown", (e) => {
+      //   if (e.key === "Escape" && isEditing) {
+      //     console.log("Escape");
+
+      //     cancelDrawing();
+      //   }
+      // });
+
+      // function startNewLine(latlng, color) {
+      //   if (tempPolyline) {
+      //     map.removeLayer(tempPolyline);
+      //   }
+
+      //   isDrawingEnabled = true;
+
+      //   // Создаём временную линию-призрак
+      //   tempPolyline = L.polyline([latlng, latlng], {
+      //     color: color,
+      //     weight: 7,
+      //     opacity: 0.5,
+      //     dashArray: "10, 10", // Пунктирная линия для визуального различия
+      //   }).addTo(map);
+      //   currentPolyline = L.polyline([latlng], {
+      //     color: color,
+      //     weight: 10,
+      //     opacity: currentOpacity,
+      //   }).addTo(map);
+      //   lines.push({ polyline: currentPolyline });
+      //   addRemoveHandler(currentPolyline);
+      // }
+
+      // function continueLine(latlng) {
+      //   if (!isDrawingEnabled || !tempPolyline) return;
+
+      //   let latlngs = tempPolyline.getLatLngs();
+      //   latlngs[latlngs.length - 1] = latlng; // Фиксируем текущий конец линии
+
+      //   // Создаём постоянную линию
+      //   currentPolyline = L.polyline(latlngs, {
+      //     color: tempPolyline.options.color,
+      //     weight: 10,
+      //     opacity: 1,
+      //   }).addTo(map);
+
+      //   lines.push({ polyline: currentPolyline });
+
+      //   // Начинаем новую временную линию с последней точки
+      //   startNewLine(latlng, tempPolyline.options.color);
+      // }
+
+      // function cancelDrawing() {
+      //   if (tempPolyline) {
+      //     map.removeLayer(tempPolyline);
+      //     tempPolyline = null;
+      //   }
+      //   isDrawingEnabled = false;
+      // }
 
       function startNewLine(latlng, color) {
         currentPolyline = L.polyline([latlng], {
