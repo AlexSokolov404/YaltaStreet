@@ -1,8 +1,9 @@
 {
     "name": "Yalta Street",
-    "short_name": "Yalta",
-    "start_url": "/",
+    "short_name": "YaltaStreet",
+    "start_url": "/YaltaStreet",
     "display": "standalone",
+    "orientation": "portrait",
     "background_color": "#ffffff",
     "theme_color": "#4CAF50",
     "description": "Карта улиц Ялты с возможностью рисования",
