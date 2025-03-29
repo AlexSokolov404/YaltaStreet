@@ -10,13 +10,13 @@
       content="black-translucent"
     />
     <meta name="theme-color" content="#4CAF50" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
     <title>Редактируемая карта</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script>
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker
-          .register("/service-worker.js")
+          .register("service-worker.js")
           .then(() => console.log("Service Worker зарегистрирован!"))
           .catch((err) => console.log("Ошибка Service Worker:", err));
       }
