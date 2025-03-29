@@ -1,8 +1,8 @@
 const CACHE_NAME = "yalta-streets-cache-v1";
 const urlsToCache = [
   "/YaltaStreet",
-  "icons/icon-192x192.png",
-  "icons/icon-512x512.png",
+  "/icons/icon-192x192.png",
+  "/icons/icon-512x512.png",
 ];
 
 self.addEventListener("install", (event) => {

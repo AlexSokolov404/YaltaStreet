@@ -535,11 +535,25 @@
                     <span class="street-name" onclick="focusStreet(${index})">${
             street.name
           }</span>
-                    <input type="color" class="color-picker ${
-                      admin ? "" : "hidden"
-                    }" value="${
-            street.color
-          }" onchange="changeStreetColor(${index}, this.value)">
+          <select class="color-picker ${admin ? "" : "hidden"}" onchange="changeStreetColor(${index}, this.value)">
+              <option value="#ff0000" style="background: #ff0000; color: white">
+                Красный
+              </option>
+              <option value="#00ff00" style="background: green; color: white">
+                Зеленый
+              </option>
+              <option value="#0000ff" style="background: #0000ff; color: white">
+                Синий
+              </option>
+              <option value="#fff240" style="background: #fff240; color: white">
+                Желтый
+              </option>
+              <option value="#cc00ff" style="background: #cc00ff; color: white">
+                Фиолетовый
+              </option>
+            </select>
+
+
                     <button class="delete-btn ${
                       admin ? "" : "hidden"
                     }" onclick="deleteStreet(${index})">✖</button>
