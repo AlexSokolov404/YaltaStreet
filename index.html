@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="manifest" href="manifest.json" />
-    <link rel="icon" href="favicon.ico">
+    <link rel="icon" href="favicon.ico" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
@@ -14,15 +14,6 @@
     <link rel="apple-touch-icon" href="icons/icon-192x192.png" />
     <title>Редактируемая карта</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script>
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker
-          .register("service-worker.js")
-          .then(() => console.log("Service Worker зарегистрирован!"))
-          .catch((err) => console.log("Ошибка Service Worker:", err));
-      }
-    </script>
-
     <style>
       * {
         user-select: none;
@@ -51,7 +42,7 @@
         left: 50%;
         transform: translateX(-50%);
       }
-      @media (max-width: 565px ) {
+      @media (max-width: 565px) {
         .wrapper {
           padding-bottom: 40px;
         }
@@ -535,7 +526,9 @@
                     <span class="street-name" onclick="focusStreet(${index})">${
             street.name
           }</span>
-          <select class="color-picker ${admin ? "" : "hidden"}" onchange="changeStreetColor(${index}, this.value)">
+          <select class="color-picker ${
+            admin ? "" : "hidden"
+          }" onchange="changeStreetColor(${index}, this.value)">
               <option value="#ff0000" style="background: #ff0000; color: white">
                 Красный
               </option>
@@ -552,8 +545,6 @@
                 Фиолетовый
               </option>
             </select>
-
-
                     <button class="delete-btn ${
                       admin ? "" : "hidden"
                     }" onclick="deleteStreet(${index})">✖</button>
@@ -594,35 +585,35 @@
         let color = document.getElementById("colorPicker").value;
         let now = Date.now();
 
-        if (!currentPolyline || now - lastClickTime > 1000) {
+        if (!currentPolyline /*|| now - lastClickTime > 1500*/) {
           startNewLine(e.latlng, color);
         } else {
           continueLine(e.latlng);
-          clearTimeout(timeoutId);
+          // clearTimeout(timeoutId);
 
-          timeoutId = setTimeout(() => {
-            saveDrawnLine(currentPolyline, color);
-          }, 800);
+          // timeoutId = setTimeout(() => {
+          //   saveDrawnLine(currentPolyline, color);
+          // }, 800);
         }
 
         lastClickTime = now;
       }
 
-      // map.on("mousemove", (e) => {
-      //   if (isDrawingEnabled && tempPolyline) {
-      //     let latlngs = tempPolyline.getLatLngs();
-      //     latlngs[latlngs.length - 1] = e.latlng; // Последняя точка двигается за курсором
-      //     tempPolyline.setLatLngs(latlngs);
-      //   }
-      // });
+      map.on("mousemove", (e) => {
+        if (isDrawingEnabled && tempPolyline) {
+          let latlngs = tempPolyline.getLatLngs();
+          latlngs[latlngs.length - 1] = e.latlng; // Последняя точка двигается за курсором
+          tempPolyline.setLatLngs(latlngs);
+        }
+      });
 
-      // document.addEventListener("keydown", (e) => {
-      //   if (e.key === "Escape" && isEditing) {
-      //     console.log("Escape");
-
-      //     cancelDrawing();
-      //   }
-      // });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && isEditing) {
+          let color = document.getElementById("colorPicker").value;
+          cancelDrawing();
+          saveDrawnLine(currentPolyline, color);
+        }
+      });
 
       // function startNewLine(latlng, color) {
       //   if (tempPolyline) {
@@ -636,13 +627,14 @@
       //     color: color,
       //     weight: 7,
       //     opacity: 0.5,
-      //     dashArray: "10, 10", // Пунктирная линия для визуального различия
+      //     dashArray: "10, 10",
       //   }).addTo(map);
       //   currentPolyline = L.polyline([latlng], {
       //     color: color,
       //     weight: 10,
       //     opacity: currentOpacity,
       //   }).addTo(map);
+      //   console.error(currentPolyline)
       //   lines.push({ polyline: currentPolyline });
       //   addRemoveHandler(currentPolyline);
       // }
@@ -654,42 +646,50 @@
       //   latlngs[latlngs.length - 1] = latlng; // Фиксируем текущий конец линии
 
       //   // Создаём постоянную линию
-      //   currentPolyline = L.polyline(latlngs, {
-      //     color: tempPolyline.options.color,
-      //     weight: 10,
-      //     opacity: 1,
-      //   }).addTo(map);
-
-      //   lines.push({ polyline: currentPolyline });
+      //   if (currentPolyline) {
+      //     let latlngs = currentPolyline.getLatLngs();
+      //     latlngs.push(latlng);
+      //     currentPolyline.setLatLngs(latlngs);
+      //   }
 
       //   // Начинаем новую временную линию с последней точки
       //   startNewLine(latlng, tempPolyline.options.color);
       // }
 
-      // function cancelDrawing() {
-      //   if (tempPolyline) {
-      //     map.removeLayer(tempPolyline);
-      //     tempPolyline = null;
-      //   }
-      //   isDrawingEnabled = false;
-      // }
+      function cancelDrawing() {
+        if (tempPolyline) {
+          map.removeLayer(tempPolyline);
+          tempPolyline = null;
+        }
+      }
 
       function startNewLine(latlng, color) {
+        // Создаём временную линию-призрак
+        tempPolyline = L.polyline([latlng, latlng], {
+          color: color,
+          weight: 7,
+          opacity: 0.5,
+          dashArray: "10, 10",
+        }).addTo(map);
         currentPolyline = L.polyline([latlng], {
           color: color,
           weight: 10,
           opacity: currentOpacity,
         }).addTo(map);
         lines.push({ polyline: currentPolyline });
-        actionHistory.push({ action: "add", polyline: currentPolyline });
+        //actionHistory.push({ action: "add", polyline: currentPolyline });
         addRemoveHandler(currentPolyline);
       }
 
       function continueLine(latlng) {
         if (currentPolyline) {
+          let templatlngs = tempPolyline.getLatLngs();
           let latlngs = currentPolyline.getLatLngs();
           latlngs.push(latlng);
+          templatlngs.push(latlng)
           currentPolyline.setLatLngs(latlngs);
+          templatlngs[templatlngs.length - 1] = latlng;
+          tempPolyline.setLatLngs(templatlngs);
         }
       }
 
