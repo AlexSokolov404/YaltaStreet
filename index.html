@@ -324,6 +324,7 @@
                 Фиолетовый
               </option>
             </select>
+            <button onclick="cancelDrawing()">Завершить</button>
             <button onclick="disableEditMode()">Выход</button>
           </div>
         </div>
@@ -609,9 +610,7 @@
 
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && isEditing) {
-          let color = document.getElementById("colorPicker").value;
           cancelDrawing();
-          saveDrawnLine(currentPolyline, color);
         }
       });
 
@@ -657,10 +656,12 @@
       // }
 
       function cancelDrawing() {
+        let color = document.getElementById("colorPicker").value;
         if (tempPolyline) {
           map.removeLayer(tempPolyline);
           tempPolyline = null;
         }
+        saveDrawnLine(currentPolyline, color);
       }
 
       function startNewLine(latlng, color) {
